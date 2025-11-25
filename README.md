@@ -79,6 +79,7 @@ The architecture simulates a simplified enterprise storage environment:
 ┌─────────────▼───────────────┐
 │           Grafana           │
 └──────────────────────────────┘
+***
 
 🚀 Quick Start (Full Lab Environment)
 
@@ -104,22 +105,22 @@ Grafana	        http://localhost:3000    admin / admin
 
 🧪 Automation Workflows (Ansible Playbooks)
 
-Provision a new volume
+* Provision a new volume
    ansible-playbook ansible/playbooks/storage_provision.yml
 
-Trigger backups for all volumes
+* Trigger backups for all volumes
    ansible-playbook ansible/playbooks/backup_trigger.yml
 
-Validate backups exist
+* Validate backups exist
    ansible-playbook ansible/playbooks/backup_validate.yml
 
-Delete all test volumes
+* Delete all test volumes
    ansible-playbook ansible/playbooks/cleanup.yml
 
-Simulate storage-api LCM upgrade
+* Simulate storage-api LCM upgrade
    ansible-playbook ansible/playbooks/lcm_upgrade.yml
 
-Run LCM health check
+* Run LCM health check
    ansible-playbook ansible/playbooks/lcm_health_check.yml
 
 📊 Monitoring & Metrics
