@@ -56,27 +56,28 @@ Starts the entire environment:
 
 The architecture simulates a simplified enterprise storage environment:
 
+```text
 ┌──────────────────────────────┐
-│      Ansible Automation      │
+│     Ansible Automation       │
 │ (Provision, Backup, LCM Ops) │
 └─────────────┬────────────────┘
               │ REST API Calls
 ┌─────────────▼───────────────┐
-│    Python Storage API        │
+│     Python Storage API      │
 │  /volumes  /backup  /metrics │
 └─────────────┬───────────────┘
               │ S3 Operations
 ┌─────────────▼───────────────┐
-│            MinIO             │
+│           MinIO             │
 │ storage-volumes / backups    │
 └─────────────┬───────────────┘
               │ Metrics scrape
 ┌─────────────▼───────────────┐
-│          Prometheus          │
+│          Prometheus         │
 └─────────────┬───────────────┘
               │ Dashboards
 ┌─────────────▼───────────────┐
-│            Grafana           │
+│           Grafana           │
 └──────────────────────────────┘
 
 🚀 Quick Start (Full Lab Environment)
@@ -141,7 +142,9 @@ Grafana dashboard includes:
 * Alerts (API down, backup failures, missing backups)
 
 ![Grafana Dashboard Overview](Grafana-Dashboard-Storage-Automation-Overview.jpg)
+
 ![Prometheus Status Target](Prometheus-Status-Target-health.jpg)
+
 ![MinIO Storage Dashboard](MinIO-multiple-storages.jpg)
 
 Dashboard JSON is located at:
