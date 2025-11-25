@@ -1,0 +1,32 @@
+---
+- name: LCM Upgrade – Redeploy Storage API Service
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+
+    - name: Pull latest base image (simulated upgrade)
+      shell: docker pull python:3.11-slim
+      register: pulled
+      changed_when: "'Downloaded' in pulled.stdout"
+
+    - name: Rebuild and restart storage-api
+      shell: docker compose up -d --build storage-api
+      args:
+        chdir: "{{ lookup('env','PWD') }}"
+      register: restart_result
+
+    - name: Show restart output
+      debug:
+        var: restart_result.stdout
+
+    - name: Wait for API to be up
+      wait_for:
+        host: "localhost"
+        port: 5000
+        delay: 3
+        timeout: 30
+
+    - name: Run post-upgrade health check
+      include_tasks: ../tasks/health_check_tasks.yml
+

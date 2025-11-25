@@ -1,0 +1,50 @@
+---
+- name: Provision multiple storage volumes via API
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    api_url: "http://localhost:5000/api/v1/volumes"
+    size_gb: 20
+    # Define the list of volume names to be created
+    volume_list:
+      - "vol-data-01"
+      - "vol-data-02"
+      - "vol-data-03"
+      - "vol-data-04"
+
+  tasks:
+
+    - name: Create storage volume via API (Loop 4 times)
+      uri:
+        url: "{{ api_url }}"
+        method: POST
+        body_format: json
+        body:
+          # Use the item from the loop as the volume name
+          name: "{{ item }}" 
+          size_gb: "{{ size_gb }}"
+        status_code: 201
+        return_content: yes
+      register: creation_results
+      # Loop this task through all items in the volume_list
+      loop: "{{ volume_list }}" 
+
+    - name: Show results in console
+      debug:
+        # Display the JSON output for each successful API call
+        var: creation_results.results | map(attribute='json') | list
+
+    - name: Ensure logs directory exists
+      file:
+        path: "logs"
+        state: directory
+
+    - name: Write provisioning log to file for each volume
+      copy:
+        content: "{{ item.json | to_nice_json }}"
+        # item.item is the name of the volume for the current loop iteration
+        dest: "logs/{{ item.item }}.json" 
+      loop: "{{ creation_results.results }}"
+      # Only write the log file if the volume creation was successful (changed status)
+      when: item.changed

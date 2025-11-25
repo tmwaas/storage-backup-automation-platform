@@ -1,0 +1,35 @@
+---
+- name: Cleanup all volumes in the system (LCM automation)
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    api_url: "http://localhost:5000/api/v1/volumes"
+
+  tasks:
+
+    - name: List all volumes
+      uri:
+        url: "{{ api_url }}"
+        method: GET
+        return_content: yes
+      register: volumes_result
+
+    - name: Show volumes that will be removed
+      debug:
+        var: volumes_result.json.volumes
+
+    - name: Delete each volume
+      loop: "{{ volumes_result.json.volumes }}"
+      loop_control:
+        label: "{{ item.id }}"
+      uri:
+        url: "{{ api_url }}/{{ item.id }}"
+        method: DELETE
+        status_code: 200
+      register: deletion_results
+
+    - name: Show deletion results
+      debug:
+        var: deletion_results.results
+     

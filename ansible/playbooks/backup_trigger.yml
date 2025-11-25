@@ -1,0 +1,47 @@
+---
+- name: Trigger backups via API and record results
+  hosts: localhost
+  gather_facts: no # Added for completeness
+
+  vars:
+    api_url: "http://localhost:5000/api/v1"
+
+  tasks:
+    # 1. List Volumes
+    - name: List volumes (GET /api/v1/volumes)
+      uri:
+        url: "{{ api_url }}/volumes"
+        method: GET
+        status_code: 200 # Expect 200 for a successful list
+        return_content: yes
+      register: volumes
+
+    # 2. Trigger Backup for Each Volume
+    - name: Trigger backup for each volume (POST /api/v1/backup)
+      uri:
+        # Assuming the backup endpoint is at /api/v1/backup
+        url: "{{ api_url }}/backup" 
+        method: POST
+        body_format: json
+        body:
+          volume: "{{ volume_item.name }}"
+        # Accepting 200 (OK) or 202 (Accepted/In Progress)
+        status_code: 200,202 
+        return_content: yes
+      # Use the correct JSON path to the list of volumes
+      loop: "{{ volumes.json.volumes | default([]) }}" 
+      loop_control:
+        loop_var: volume_item # Using explicit loop_var for clarity
+      register: backup_results
+      
+    # 3. Save Backup Results
+    # Ensuring logs directory exists before writing
+    - name: Ensure logs directory exists
+      file:
+        path: "logs"
+        state: directory
+        
+    - name: Save backup results (combined log)
+      copy:
+        content: "{{ backup_results.results | to_nice_json }}"
+        dest: "logs/backup_results_{{ lookup('pipe','date +%Y%m%d%H%M%S') }}.json"     

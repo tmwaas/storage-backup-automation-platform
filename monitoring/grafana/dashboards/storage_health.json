@@ -1,0 +1,47 @@
+{
+  "id": null,
+  "title": "Storage Health (v3)",
+  "tags": [
+    "backup",
+    "storage",
+    "v3"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Volume Count",
+      "targets": [
+        {
+          "expr": "storage_volume_count",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Backup Duration (if available)",
+      "targets": [
+        {
+          "expr": "backup_duration_seconds",
+          "refId": "B"
+        }
+      ],
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 6
+      }
+    }
+  ]
+}

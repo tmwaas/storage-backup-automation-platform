@@ -1,0 +1,44 @@
+---
+groups:
+  - name: infra-automation-storage-rules
+    rules:
+      # 1. Storage API is down
+      - alert: StorageAPIDown
+        expr: up{job="storage-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Storage API is DOWN"
+          description: "Prometheus has not been able to reach the storage-api job for more than 1 minute."
+
+      # 2. Node exporter is down (host metrics lost)
+      - alert: NodeExporterDown
+        expr: up{job="backup-monitor"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node exporter is DOWN"
+          description: "Node-exporter (backup-monitor job) has been unreachable for 5 minutes."
+
+      # 3. Too many volumes provisioned (possible leak or runaway tests)
+      - alert: HighStorageVolumeCount
+        expr: storage_volumes_total > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of storage volumes"
+          description: "storage_volumes_total is {{ $value }} (> 20). Check for test data or misbehaving automation."
+
+      # 4. Backup Failures is detected
+      - alert: BackupFailuresDetected
+        expr: backup_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup failures detected"
+          description: "One or more backup operations have failed. backup_failures_total={{ $value }}."    
+

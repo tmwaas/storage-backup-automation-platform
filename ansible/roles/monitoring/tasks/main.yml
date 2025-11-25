@@ -1,0 +1,3 @@
+---
+# role: monitoring - placeholder tasks (extend to configure exporters)
+- debug: msg='monitoring role executed'

@@ -1,0 +1,37 @@
+---
+- name: Provision storage volume via API (real automation)
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    api_url: "http://localhost:5000/api/v1/volumes"
+    volume_name: "vol-{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+    size_gb: 20
+
+  tasks:
+
+    - name: Create storage volume via API
+      uri:
+        url: "{{ api_url }}"
+        method: POST
+        body_format: json
+        body:
+          name: "{{ volume_name }}"
+          size_gb: "{{ size_gb }}"
+        status_code: 201
+        return_content: yes
+      register: create_result
+
+    - name: Show result in console
+      debug:
+        var: create_result.json
+
+    - name: Ensure logs directory exists
+      file:
+        path: "logs"
+        state: directory
+
+    - name: Write provisioning log to file
+      copy:
+        content: "{{ create_result.json | to_nice_json }}"
+        dest: "logs/{{ volume_name }}.json"

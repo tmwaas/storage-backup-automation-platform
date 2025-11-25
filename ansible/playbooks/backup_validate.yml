@@ -1,0 +1,93 @@
+---
+- name: Validate backups for all volumes
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    api_base_url: "http://localhost:5000/api/v1"
+    timestamp: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+  tasks:
+
+    - name: Retrieve list of volumes
+      uri:
+        url: "{{ api_base_url }}/volumes"
+        method: GET
+        return_content: yes
+      register: volumes_response
+
+    - name: Parse volumes list
+      set_fact:
+        volumes: "{{ volumes_response.json.volumes }}"
+
+    - name: Retrieve list of backup objects
+      uri:
+        url: "{{ api_base_url }}/backups"
+        method: GET
+        return_content: yes
+      register: backups_response
+
+    - name: Parse backup list
+      set_fact:
+        backups: "{{ backups_response.json.backups | default([]) }}"
+
+    - name: Ensure logs directory exists
+      file:
+        path: "logs"
+        state: directory
+
+    - name: Build validation report
+      set_fact:
+        validation_report: >-
+          {{
+            volumes | items2dict(key_name='name',
+            value_name='validation')
+            | combine(
+                dict(volumes | map('extract', {
+                      'name': 'name',
+                      'backup_found': volumes | map('extract', {
+                        'name': 'name',
+                        'backup': (
+                          backups |
+                          selectattr('volume_name', 'equalto', item.name) |
+                          list |
+                          length > 0
+                        )
+                      })
+                    })
+                )
+          }}
+
+    - name: Validate each volume
+      vars:
+        result_list: []
+      block:
+        - name: Check backup for each volume
+          set_fact:
+            result_list: "{{ result_list + [ {
+                'volume': item.name,
+                'backup_exists': (
+                  backups |
+                  selectattr('volume_name', 'equalto', item.name) |
+                  list |
+                  length > 0
+                ),
+                'backup_count': (
+                  backups |
+                  selectattr('volume_name', 'equalto', item.name) |
+                  list |
+                  length
+                )
+            } ] }}"
+          loop: "{{ volumes }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Save validation results
+          copy:
+            dest: "logs/backup_validation_{{ timestamp }}.json"
+            content: "{{ result_list | to_nice_json }}"
+
+    - name: Display summary result
+      debug:
+        msg: "{{ result_list }}"

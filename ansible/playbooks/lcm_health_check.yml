@@ -1,0 +1,23 @@
+---
+- name: LCM Health Check – Verify Storage API Availability
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    metrics_url: "http://localhost:5000/metrics"
+
+  tasks:
+
+    - name: Check if API is reachable
+      uri:
+        url: "{{ metrics_url }}"
+        method: GET
+        return_content: yes
+      register: metrics_result
+      failed_when: >
+        metrics_result.status != 200 or
+        ('storage_volumes_total' not in metrics_result.content)
+
+    - name: Show metrics
+      debug:
+        var: metrics_result.content

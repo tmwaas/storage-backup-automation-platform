@@ -1,0 +1,50 @@
+# -------------------------
+# Python virtual environments
+# -------------------------
+.venv/
+venv/
+env/
+*.egg-info/
+
+# -------------------------
+# Python cache files
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# -------------------------
+# Logs and temp artifacts
+# -------------------------
+logs/
+*.log
+*.tmp
+*.bak
+
+# -------------------------
+# OS-specific files
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Editor/IDE files
+# -------------------------
+.vscode/
+.idea/
+
+# -------------------------
+# Secrets / local env
+# -------------------------
+.env
+*.local.yaml
+*.secret
+
+# -------------------------
+# Docker / runtime files
+# -------------------------
+data/
+grafana-data/
+*.pid
+

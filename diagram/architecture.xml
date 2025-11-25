@@ -1,0 +1,17 @@
+<mxfile>
+  <diagram name="Architecture">
+    <mxGraphModel>
+      <root>
+        <mxCell id="1" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1">
+          <mxGeometry x="20" y="20" width="300" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="2" value="Storage API" style="text" vertex="1">
+          <mxGeometry x="40" y="40" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="MinIO" style="text" vertex="1">
+          <mxGeometry x="200" y="40" width="120" height="40" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

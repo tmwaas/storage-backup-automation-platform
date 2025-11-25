@@ -1,0 +1,42 @@
+# Dockerfile.prometheus
+# This uses a standard Debian image to guarantee the 'apt-get' package manager is available,
+# allowing us to install 'curl' for internal network diagnostics, and then manually installs Prometheus.
+
+# Use a standard Debian image which guarantees apt-get functionality
+FROM debian:stable-slim
+
+# Install necessary tools: curl for diagnostics, and utilities needed for Prometheus installation (wget, tar).
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    wget \
+    tar \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Prometheus (using the latest stable version)
+ARG PROMETHEUS_VERSION="2.50.1"
+ARG ARCH="amd64"
+
+# Download the Prometheus binary, extract it, rename the directory, and clean up the archive
+RUN wget https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-${ARCH}.tar.gz -O /tmp/prometheus.tar.gz && \
+    tar -xzf /tmp/prometheus.tar.gz -C /opt && \
+    mv /opt/prometheus-${PROMETHEUS_VERSION}.linux-${ARCH} /opt/prometheus && \
+    rm /tmp/prometheus.tar.gz
+
+# Add Prometheus user and create required directories
+RUN useradd -m -s /bin/bash prometheus
+RUN mkdir -p /etc/prometheus /var/lib/prometheus
+
+# Set permissions for the Prometheus user
+RUN chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus /opt/prometheus
+
+# Set the working directory
+WORKDIR /opt/prometheus
+
+# Switch to the non-root Prometheus user
+USER prometheus
+
+# Set the entrypoint to run Prometheus, reading the config file from the volume mount
+ENTRYPOINT [ "/opt/prometheus/prometheus" ]
+CMD [ "--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/var/lib/prometheus" ]

@@ -1,0 +1,81 @@
+{
+  "title": "Storage Automation Overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Volumes",
+      "id": 1,
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "expr": "storage_volumes_total",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Storage API Up",
+      "id": 2,
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "expr": "up{job=\"storage-api\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Node Exporter Up",
+      "id": 3,
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "expr": "up{job=\"backup-monitor\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Backup Operations Total",
+      "id": 4,
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 6 },
+      "targets": [
+        {
+           "expr": "backup_operations_total",
+           "refId": "A" 
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Backup Failures Total",
+      "id": 5,
+      "gridPos": { "x": 0, "y": 6, "w": 6, "h": 6 },
+      "targets": [
+        { "expr": "backup_failures_total",
+          "refId": "A" 
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Volume Count Over Time",
+      "id": 4,
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 8 },
+      "lines": true,
+      "targets": [
+        {
+          "expr": "storage_volumes_total",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
