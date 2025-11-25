@@ -79,7 +79,7 @@ The architecture simulates a simplified enterprise storage environment:
 ┌─────────────▼───────────────┐
 │           Grafana           │
 └──────────────────────────────┘
-***
+```
 
 🚀 Quick Start (Full Lab Environment)
 
