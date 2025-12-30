@@ -48,3 +48,13 @@ data/
 grafana-data/
 *.pid
 
+# --------------------------------
+# Runtime data (MinIO / backups)
+# --------------------------------
+data/
+storage_backup_cron.log
+
+# ---------------------------------------------------------
+# Grafana local state (dashboard is versioned separately)
+# ---------------------------------------------------------
+grafana.db

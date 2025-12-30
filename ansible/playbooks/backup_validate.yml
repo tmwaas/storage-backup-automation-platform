@@ -1,93 +1,63 @@
 ---
-- name: Validate backups for all volumes
+- name: Backup Health Validation (RPO)
   hosts: localhost
-  gather_facts: no
+  gather_facts: false
 
   vars:
-    api_base_url: "http://localhost:5000/api/v1"
-    timestamp: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+    api_base: "http://localhost:5000/api/v1"
+    rpo_hours: 24
+    timestamp: "{{ lookup('pipe','date -u +%Y%m%d%H%M%S') }}"
 
   tasks:
-
-    - name: Retrieve list of volumes
+    - name: Get volumes
       uri:
-        url: "{{ api_base_url }}/volumes"
+        url: "{{ api_base }}/volumes"
         method: GET
-        return_content: yes
-      register: volumes_response
+        return_content: true
+      register: vols
 
-    - name: Parse volumes list
-      set_fact:
-        volumes: "{{ volumes_response.json.volumes }}"
-
-    - name: Retrieve list of backup objects
+    - name: Get backups
       uri:
-        url: "{{ api_base_url }}/backups"
+        url: "{{ api_base }}/backups"
         method: GET
-        return_content: yes
-      register: backups_response
+        return_content: true
+      register: bkp
 
-    - name: Parse backup list
+    - name: Prepare data
       set_fact:
-        backups: "{{ backups_response.json.backups | default([]) }}"
+        volumes: "{{ vols.json.volumes | default([]) }}"
+        backups: "{{ bkp.json.backups | default([]) }}"
+        report: []
+
+    - name: Validate each volume backup
+      include_tasks: ../tasks/validate_volume_backup.yml
+      vars:
+        vname: "{{ item.name }}"
+        v_backups: "{{ backups | selectattr('volume_name','equalto', item.name) | list }}"
+        latest_created: >-
+          {{
+            (v_backups | sort(attribute='created_at') | last).created_at
+              if v_backups | length > 0 else ''
+          }}
+        latest_dt: "{{ latest_created | regex_replace('Z$','') | to_datetime('%Y-%m-%dT%H:%M:%S.%f') if latest_created != '' else none }}"
+        now_dt: "{{ lookup('pipe','date -u +%Y-%m-%dT%H:%M:%S.%6N') | to_datetime('%Y-%m-%dT%H:%M:%S.%f') }}"
+        age_seconds: "{{ (now_dt - latest_dt).total_seconds() if latest_dt is not none else 999999999 }}"
+        rpo_seconds: "{{ rpo_hours * 3600 }}"
+      loop: "{{ volumes }}"
+      loop_control:
+        label: "{{ item.name }}"
 
     - name: Ensure logs directory exists
       file:
-        path: "logs"
+        path: logs
         state: directory
 
-    - name: Build validation report
-      set_fact:
-        validation_report: >-
-          {{
-            volumes | items2dict(key_name='name',
-            value_name='validation')
-            | combine(
-                dict(volumes | map('extract', {
-                      'name': 'name',
-                      'backup_found': volumes | map('extract', {
-                        'name': 'name',
-                        'backup': (
-                          backups |
-                          selectattr('volume_name', 'equalto', item.name) |
-                          list |
-                          length > 0
-                        )
-                      })
-                    })
-                )
-          }}
+    - name: Save validation report
+      copy:
+        dest: "logs/backup_validation_{{ timestamp }}.json"
+        content: "{{ report | to_nice_json }}"
 
-    - name: Validate each volume
-      vars:
-        result_list: []
-      block:
-        - name: Check backup for each volume
-          set_fact:
-            result_list: "{{ result_list + [ {
-                'volume': item.name,
-                'backup_exists': (
-                  backups |
-                  selectattr('volume_name', 'equalto', item.name) |
-                  list |
-                  length > 0
-                ),
-                'backup_count': (
-                  backups |
-                  selectattr('volume_name', 'equalto', item.name) |
-                  list |
-                  length
-                )
-            } ] }}"
-          loop: "{{ volumes }}"
-          loop_control:
-            label: "{{ item.name }}"
-
-        - name: Save validation results
-          copy:
-            dest: "logs/backup_validation_{{ timestamp }}.json"
-            content: "{{ result_list | to_nice_json }}"
-
-    - name: Display summary result
+    - name: Show summary
       debug:
-        msg: "{{ result_list }}"
+        var: report
+

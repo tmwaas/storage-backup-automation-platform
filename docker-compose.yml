@@ -27,16 +27,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prometheus
-    # image: prom/prometheus
     container_name: prometheus
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml 
+    user: "0:0"
     ports:
       - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
     depends_on:
       - storage-api
-
+    
   node-exporter:
     image: prom/node-exporter
     container_name: node-exporter
@@ -58,5 +62,26 @@ services:
     depends_on:
       - prometheus
 
+  backup-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.scheduler
+    container_name: backup-scheduler
+    environment:
+      - API_BASE=http://storage-api:5000/api/v1
+      - TZ=Europe/Amsterdam
+    volumes:
+      - ./scripts/cronjobs:/etc/crontabs/root:ro
+    depends_on:
+      storage-api:
+        condition: service_started    
+
 volumes:
   grafana-data:
+    name: infra-automation-storage-project_grafana-data
+  prometheus-data:
+    name: infra-automation-storage-project_prometheus-data
+
+
+
+

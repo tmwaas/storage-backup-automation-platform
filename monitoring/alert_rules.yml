@@ -40,5 +40,38 @@ groups:
           severity: critical
         annotations:
           summary: "Backup failures detected"
-          description: "One or more backup operations have failed. backup_failures_total={{ $value }}."    
+          description: "One or more backup operations have failed. backup_failures_total={{ $value }}."   
+
+      # 5. Backup not running in 24h
+      - alert: BackupNotRunning24h
+        expr: increase(backup_operations_total[24h]) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No backup executed in last 24 hours"
+          description: "Backup job did not run successfully in the last 24 hours."
+
+      # 6. Backup RPO Violation (per volume)    
+      - alert: BackupRPOViolation
+        expr: backup_rpo_violation == 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup RPO violation detected"
+          description: "Volume {{ $labels.volume }} has exceeded allowed RPO."
+
+      # 7. Backup not running at scheduled time     
+      - alert: BackupNotRunningAtScheduledTime
+        expr: (hour() == 17) and (rate(backup_operations_total[5m]) == 0)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup not running at scheduled time"
+          description: "Expected backup activity at 17:00 but no operations detected."
+                                                                                                                      
+
+     
 

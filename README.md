@@ -1,165 +1,241 @@
-🚀 Infrastructure Automation – Storage & Backup Platform (Simulation Lab)
+# 🚀 Infrastructure Automation – Storage & Backup Platform (Simulation Lab)
 
-This repository provides a production-style simulation of an automated storage and backup platform, including provisioning, backups, cleanup automation, monitoring, and lifecycle management (LCM).
-Although the environment is a simulation lab, the entire project follows real-world patterns used in enterprise environments:
+## Overview
 
-* API-driven storage provisioning
-* Automated backup workflows
-* Lifecycle management (LCM) automation
-* Monitoring & alerting with Prometheus/Grafana
-* Operational automation using Ansible
-* Observability & custom metrics exposure
-* MinIO (S3-compatible) as persistent storage backend
+This repository provides a **production-style simulation** of an automated **storage and backup platform**, designed to reflect real-world enterprise and telco-grade operational patterns.
 
-📦 What This Project Delivers
+Although implemented as a simulation lab, the architecture, automation flows, monitoring, and alerting mechanisms closely mirror what is commonly found in **large-scale enterprise IT and telecom environments**.
 
-✔ API-Driven Storage System
-A Flask-based REST API that supports:
-* Create/Delete volumes
-* Trigger backups
-* List backups
-* Prometheus metrics endpoint (/metrics)
-* Health check endpoint (/health)
+The project demonstrates how **API-driven storage services**, **scheduled backups**, **observability**, and **infrastructure automation** can be designed, operated, and monitored in a consistent and scalable manner.
 
-✔ Persistent Backend Using MinIO
-Simulates:
-* Metadata storage for volumes (storage-volumes bucket)
-* Backup storage (storage-volumes-backup bucket)
+---
 
-✔ Full Automation with Ansible
-Includes complete end-to-end workflows:
-* Provisioning (storage_provision.yml)
-* Backup Automation (backup_trigger.yml)
-* Backup Validation (backup_validate.yml)
-* Cleanup workflows (cleanup.yml)
-* LCM Upgrade Simulation (lcm_upgrade.yml)
-* LCM Health Check (lcm_health_check.yml)
+## Key Capabilities
 
-✔ Observability Stack (Prometheus + Grafana)
-* Prometheus scrapes API metrics
-* Grafana dashboard visualizes storage & backup health
-* Alerts for:
-  * API down
-  * Node exporter down
-  * Backup failures
-  * Missing backups
+### ✅ API-Driven Storage Service
+A Python (Flask)–based REST API that supports:
 
-✔ Full Docker Compose Deployment
-Starts the entire environment:
-* Storage API
-* MinIO
-* Prometheus
-* Grafana
-* Node exporter
+- Create and delete storage volumes
+- Trigger backups per volume or for all volumes
+- List backups and volumes
+- Expose Prometheus-compatible metrics (`/metrics`)
+- Provide health checks (`/health`)
 
-🏗 Architecture Overview
+### ✅ Persistent Storage Backend (MinIO – S3 Compatible)
+MinIO is used to simulate an object-storage backend:
 
-The architecture simulates a simplified enterprise storage environment:
+- Volume metadata stored in a dedicated bucket
+- Backup artifacts stored in a backup bucket
+- Fully API-driven access, similar to AWS S3 or enterprise object storage
 
-```text
+![MinIO Storage Dashboard](MinIO-Dashboard.jpg)
+
+### ✅ Automated Backup Scheduling
+A dedicated **backup scheduler container** executes automatic backups using **cron**:
+
+- Daily scheduled backups for all volumes
+- Centralized logging of backup execution
+- API-driven backup triggers (no direct storage coupling)
+- Designed to mimic enterprise backup orchestration services
+
+### ✅ Infrastructure & Operational Automation (Ansible)
+The repository includes Ansible playbooks that simulate operational workflows:
+
+- Storage provisioning
+- Manual backup triggering
+- Backup validation
+- Cleanup automation
+- Lifecycle Management (LCM) upgrade simulation
+- Post-upgrade health checks
+
+### ✅ Observability & Monitoring (Prometheus + Grafana)
+The platform exposes custom metrics and provides full observability:
+
+**Prometheus Metrics**
+- `storage_volume_count`
+- `backup_operations_total`
+- `backup_failures_total`
+- `backup_last_success_timestamp`
+- `backup_rpo_violation`
+
+![Prometheus Status Target](prometheus-targets-updated.jpg)
+
+**Grafana Dashboard**
+- RPO violations per volume
+- Last successful backup timestamp per volume
+- Backup operation rate (5-minute window)
+- Total backup operations
+- Total storage volumes
+- Backup failures overview
+
+![Grafana Dashboard Overview](grafana-dashboard-storage-backup-automation-health.jpg)
+
+All dashboards are built using **real PromQL queries** and production-style visualization patterns.
+
+### ✅ Alerting
+Alert rules are defined for operational visibility, including:
+
+- Storage API availability
+- Backup failures
+- Missing or delayed backups (RPO violations)
+
+---
+
+## Architecture Overview
+
+```
 ┌──────────────────────────────┐
-│     Ansible Automation       │
-│ (Provision, Backup, LCM Ops) │
+│      Automation Layer        │
+│   (Ansible / Cron Scheduler) │
 └─────────────┬────────────────┘
               │ REST API Calls
 ┌─────────────▼───────────────┐
-│     Python Storage API      │
-│  /volumes  /backup  /metrics │
-└─────────────┬───────────────┘
+│       Storage API            │
+│  /volumes /backup /metrics   │
+└─────────────┬────────────────┘
               │ S3 Operations
 ┌─────────────▼───────────────┐
-│           MinIO             │
-│ storage-volumes / backups    │
-└─────────────┬───────────────┘
-              │ Metrics scrape
+│            MinIO             │
+│  Volume Metadata / Backups   │
+└─────────────┬────────────────┘
+              │ Metrics Scrape
 ┌─────────────▼───────────────┐
-│          Prometheus         │
-└─────────────┬───────────────┘
+│         Prometheus           │
+└─────────────┬────────────────┘
               │ Dashboards
 ┌─────────────▼───────────────┐
-│           Grafana           │
+│           Grafana            │
 └──────────────────────────────┘
 ```
 
-🚀 Quick Start (Full Lab Environment)
+---
 
-This lab runs fully inside Docker using WSL2 or Linux.
+## Quick Start – Full Lab Deployment
 
-1. Start the complete environment
-   
-   docker compose up -d --build
+### 1. Start the complete environment
 
-This launches:
-* MinIO
-* Storage API
-* Prometheus
-* Node Exporter
-* Grafana
+```bash
+docker compose up -d --build
+```
 
-2. Access UI Components
-Component	    URL	                     Credentials
-Storage API	    http://localhost:5000    —
-MinIO Console	http://localhost:9001    minio / minio123
-Prometheus	    http://localhost:9090    —
-Grafana	        http://localhost:3000    admin / admin
+This will start:
 
-🧪 Automation Workflows (Ansible Playbooks)
+- Storage API
+- MinIO
+- Backup Scheduler
+- Prometheus
+- Grafana
+- Node Exporter
 
-* Provision a new volume
-   ansible-playbook ansible/playbooks/storage_provision.yml
+### 2. Access Components
 
-* Trigger backups for all volumes
-   ansible-playbook ansible/playbooks/backup_trigger.yml
+| Component        | URL                         | Credentials           |
+|------------------|-----------------------------|-----------------------|
+| Storage API      | http://localhost:5000       | —                     |
+| MinIO Console    | http://localhost:9001       | minio / minio123      |
+| Prometheus       | http://localhost:9090       | —                     |
+| Grafana          | http://localhost:3000       | admin / admin         |
 
-* Validate backups exist
-   ansible-playbook ansible/playbooks/backup_validate.yml
+---
 
-* Delete all test volumes
-   ansible-playbook ansible/playbooks/cleanup.yml
+## 🧪 Automation Workflows (Ansible Playbooks)
 
-* Simulate storage-api LCM upgrade
-   ansible-playbook ansible/playbooks/lcm_upgrade.yml
+In addition to the API-driven and scheduled operations, this project includes a set of **Ansible playbooks** that simulate day-to-day operational and lifecycle workflows typically executed by infrastructure or platform teams.
 
-* Run LCM health check
-   ansible-playbook ansible/playbooks/lcm_health_check.yml
+These playbooks demonstrate **repeatable, controlled automation** aligned with enterprise operational practices.
 
-📊 Monitoring & Metrics
+### Available Playbooks
 
-The Storage API exposes Prometheus metrics:
+**Provision a new storage volume**
+```bash
+ansible-playbook ansible/playbooks/storage_provision.yml
+```
 
-storage_volumes_total
-backup_operations_total
-backup_failures_total
+**Trigger backups for all existing volumes**
+```bash
+ansible-playbook ansible/playbooks/backup_trigger.yml
+```
 
-Prometheus scrapes:
-* storage-api
-* node-exporter
+**Validate backup availability and health**
+```bash
+ansible-playbook ansible/playbooks/backup_validate.yml
+```
 
-Grafana dashboard includes:
-* Total volumes
-* Backup success/failure counters
-* Storage API health status
-* Backup operations timeline
-* Alerts (API down, backup failures, missing backups)
+**Cleanup test volumes and backup artifacts**
+```bash
+ansible-playbook ansible/playbooks/cleanup.yml
+```
 
-![Grafana Dashboard Overview](Grafana-Dashboard-Storage-Automation-Overview.jpg)
+**Simulate a Storage API lifecycle upgrade (LCM)**
+```bash
+ansible-playbook ansible/playbooks/lcm_upgrade.yml
+```
 
-![Prometheus Status Target](Prometheus-Status-Target-health.jpg)
+**Run post-upgrade lifecycle health checks**
+```bash
+ansible-playbook ansible/playbooks/lcm_health_check.yml
+```
 
-![MinIO Storage Dashboard](MinIO-multiple-storages.jpg)
+These workflows illustrate how **configuration management and operational automation** integrate with API-driven platforms and observability systems.
 
-Dashboard JSON is located at:
-   monitoring/grafana/storage_automation_dashboard.json
+---
 
-🕒 Automated Nightly Backups (Cron Example)
+## Grafana Dashboard
 
-To simulate enterprise scheduled backups:
+The Grafana dashboard reflects the **current production state** of the platform and is exported directly from Grafana.
 
-0 23 * * * cd /mnt/.../infra-automation-storage-project && ansible-playbook ansible/playbooks/backup_trigger.yml >> storage_backup_cron.log 2>&1
+📁 **Dashboard JSON**
+```
+monitoring/grafana/storage_backup_automation_dashboard.json
+```
 
-Validate cron execution via:
-* storage_backup_cron.log
-* New files in storage-volumes-backup bucket
-* /api/v1/backups API (http://localhost:5000/api/v1/backups)
-* Updated metrics
-* Grafana dashboard
+**Important Note on Time Semantics**
+- The **Time** column represents Prometheus scrape time.
+- The **Value** column represents the actual timestamp of the last successful backup.
+
+This distinction is intentional and follows Prometheus best practices.
+
+---
+
+## Automated Backup Scheduling
+
+Automatic backups are executed using a cron-based scheduler container.
+
+Example schedule (daily at 18:00):
+```cron
+0 18 * * * /app/backup_all_volumes.sh >> /var/log/cron.log 2>&1
+```
+
+Backup execution can be verified via:
+
+- Scheduler logs (`/var/log/cron.log`)
+- Prometheus metrics
+- Grafana dashboard
+- MinIO backup bucket contents
+
+---
+
+## What This Project Demonstrates
+
+This lab showcases:
+
+- API-first infrastructure design
+- Decoupled backup orchestration
+- Prometheus metric design and semantics
+- Grafana dashboard engineering
+- Cron-based scheduling in containerized environments
+- Operational automation with Ansible
+- Production-style observability and alerting patterns
+
+While simplified for learning purposes, the concepts and implementations align closely with **real enterprise and telco production systems**.
+
+---
+
+## Disclaimer
+
+This project is a **simulation and learning platform**.  
+It is not intended for direct production use but is designed to demonstrate architecture, automation, and observability principles used in real-world environments.
+
+👨‍💼 Author
+Thomas Waas
+Cloud-Native Telecom & DevOps Engineer

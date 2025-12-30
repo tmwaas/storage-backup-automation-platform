@@ -1,0 +1,30 @@
+---
+- name: Enforce RPO for volume {{ vname }}
+  block:
+
+    - name: Assert backup exists and is within RPO
+      assert:
+        that:
+          - v_backups | length > 0
+          - age_seconds <= rpo_seconds
+        fail_msg: "RPO violation: volume={{ vname }} last_backup={{ latest_created }}"
+        success_msg: "OK: volume={{ vname }} last_backup={{ latest_created }}"
+
+    - name: Append success report
+      set_fact:
+        report: "{{ report + [{
+          'volume': vname,
+          'last_backup': latest_created,
+          'age_seconds': age_seconds | int,
+          'status': 'OK'
+        }] }}"
+
+  rescue:
+    - name: Append failure report
+      set_fact:
+        report: "{{ report + [{
+          'volume': vname,
+          'last_backup': latest_created,
+          'age_seconds': age_seconds | int,
+          'status': 'RPO_VIOLATION'
+        }] }}"

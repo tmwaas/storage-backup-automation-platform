@@ -1,5 +1,5 @@
 ---
-- name: LCM Health Check – Verify Storage API Availability
+- name: LCM Health Check – Verify Storage API & Metrics
   hosts: localhost
   gather_facts: no
 
@@ -8,16 +8,26 @@
 
   tasks:
 
-    - name: Check if API is reachable
-      uri:
+    - name: Check if metrics endpoint is reachable
+      ansible.builtin.uri:
         url: "{{ metrics_url }}"
         method: GET
         return_content: yes
       register: metrics_result
-      failed_when: >
-        metrics_result.status != 200 or
-        ('storage_volumes_total' not in metrics_result.content)
 
-    - name: Show metrics
-      debug:
+    - name: Assert LCM health – correct storage metrics exposed
+      ansible.builtin.assert:
+        that:
+          - metrics_result.status == 200
+          - "'storage_volume_count' in metrics_result.content"
+          - "'storage_volumes_total' not in metrics_result.content"
+        fail_msg: >
+          LCM Health Check FAILED.
+          storage_volume_count missing or legacy storage_volumes_total still exposed.
+        success_msg: >
+          LCM Health Check OK.
+          Correct storage metric exposed and legacy metric removed.
+
+    - name: Show metrics (debug)
+      ansible.builtin.debug:
         var: metrics_result.content

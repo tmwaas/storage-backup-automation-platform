@@ -1,0 +1,7 @@
+- name: Simulated upgrade step
+  ansible.builtin.debug:
+    msg: "Simulating LCM upgrade (e.g., new image tag / config change)"
+
+- name: Wait a moment (simulate service restart)
+  ansible.builtin.pause:
+    seconds: 3

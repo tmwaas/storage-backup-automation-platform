@@ -2,8 +2,14 @@ from flask import Flask, jsonify, request
 import boto3
 import json
 import uuid
-import os
+import time
 from datetime import datetime
+from prometheus_client import (
+    Gauge,
+    Counter,
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+)
 
 app = Flask(__name__)
 
@@ -21,21 +27,51 @@ s3 = boto3.client(
 VOLUME_BUCKET = "storage-volumes"
 BACKUP_BUCKET = "storage-volumes-backup"
 
-# Ensure buckets exist at startup
+
 def ensure_bucket(name):
     try:
         s3.head_bucket(Bucket=name)
     except Exception:
         s3.create_bucket(Bucket=name)
 
+
 ensure_bucket(VOLUME_BUCKET)
 ensure_bucket(BACKUP_BUCKET)
+
+# -----------------------------
+# Prometheus Metrics (GLOBAL)
+# -----------------------------
+storage_volume_count = Gauge(
+    "storage_volume_count",
+    "Total number of storage volumes"
+)
+
+backup_operations_total = Counter(
+    "backup_operations_total",
+    "Total number of backup operations"
+)
+
+backup_failures_total = Counter(
+    "backup_failures_total",
+    "Total number of backup failures"
+)
+
+backup_last_success_timestamp = Gauge(
+    "backup_last_success_timestamp",
+    "Last successful backup timestamp",
+    ["volume"]
+)
+
+backup_rpo_violation = Gauge(
+    "backup_rpo_violation",
+    "Backup RPO violation (1 = violation, 0 = OK)",
+    ["volume"]
+)
 
 # -----------------------------
 # Helper Functions
 # -----------------------------
 def list_volumes():
-    """Return all volume metadata stored in MinIO."""
     objects = s3.list_objects_v2(Bucket=VOLUME_BUCKET)
     results = []
 
@@ -43,31 +79,13 @@ def list_volumes():
         return []
 
     for obj in objects["Contents"]:
-        key = obj["Key"]
-        content = s3.get_object(Bucket=VOLUME_BUCKET, Key=key)
-        data = json.loads(content["Body"].read())
-        results.append(data)
+        content = s3.get_object(Bucket=VOLUME_BUCKET, Key=obj["Key"])
+        results.append(json.loads(content["Body"].read()))
 
     return results
 
 
-def save_volume(volume_data):
-    key = f"{volume_data['id']}.json"
-    s3.put_object(
-        Bucket=VOLUME_BUCKET,
-        Key=key,
-        Body=json.dumps(volume_data),
-        ContentType="application/json",
-    )
-
-
-def delete_volume(volume_id):
-    key = f"{volume_id}.json"
-    s3.delete_object(Bucket=VOLUME_BUCKET, Key=key)
-
-
 def list_backups():
-    """Return all backup metadata from MinIO's backup bucket."""
     objects = s3.list_objects_v2(Bucket=BACKUP_BUCKET)
     results = []
 
@@ -75,99 +93,86 @@ def list_backups():
         return []
 
     for obj in objects["Contents"]:
-        key = obj["Key"]
-        content = s3.get_object(Bucket=BACKUP_BUCKET, Key=key)
-        data = json.loads(content["Body"].read())
-        results.append(data)
+        content = s3.get_object(Bucket=BACKUP_BUCKET, Key=obj["Key"])
+        results.append(json.loads(content["Body"].read()))
 
     return results
 
 
 def get_volume_by_name(name):
-    vols = list_volumes()
-    for v in vols:
+    for v in list_volumes():
         if v.get("name") == name:
             return v
     return None
 
 
-def save_backup(backup_data):
-    key = f"{backup_data['backup_id']}.json"
+def save_volume(volume):
+    s3.put_object(
+        Bucket=VOLUME_BUCKET,
+        Key=f"{volume['id']}.json",
+        Body=json.dumps(volume),
+        ContentType="application/json",
+    )
+
+
+def save_backup(backup):
     s3.put_object(
         Bucket=BACKUP_BUCKET,
-        Key=key,
-        Body=json.dumps(backup_data),
+        Key=f"{backup['backup_id']}.json",
+        Body=json.dumps(backup),
         ContentType="application/json",
     )
 
 
 # -----------------------------
-# Prometheus Metrics (in-memory)
-# -----------------------------
-backup_operations_total = 0
-backup_failures_total = 0
-
-# -----------------------------
 # API Endpoints
 # -----------------------------
-
-# GET: List all volumes
 @app.route("/api/v1/volumes", methods=["GET"])
 def api_get_volumes():
     volumes = list_volumes()
+    storage_volume_count.set(len(volumes))
     return jsonify({"count": len(volumes), "volumes": volumes})
 
 
-# POST: Create a new volume
 @app.route("/api/v1/volumes", methods=["POST"])
 def api_create_volume():
     body = request.get_json()
+    if not body or "name" not in body or "size_gb" not in body:
+        return jsonify({"error": "Missing name or size_gb"}), 400
 
-    if "name" not in body or "size_gb" not in body:
-        return jsonify({"error": "Missing 'name' or 'size_gb'"}), 400
-
-    vol_id = f"vol-{uuid.uuid4().hex[:8]}"
-
-    volume_data = {
-        "id": vol_id,
+    vol = {
+        "id": f"vol-{uuid.uuid4().hex[:8]}",
         "name": body["name"],
         "size_gb": body["size_gb"],
         "status": "available",
     }
 
-    save_volume(volume_data)
-    return jsonify(volume_data), 201
+    save_volume(vol)
+    storage_volume_count.set(len(list_volumes()))
+    return jsonify(vol), 201
 
 
-# DELETE: Remove a volume
-@app.route("/api/v1/volumes/<volume_id>", methods=["DELETE"])
-def api_delete_volume(volume_id):
-    delete_volume(volume_id)
-    return jsonify({"status": "deleted", "id": volume_id})
+@app.route("/api/v1/backups", methods=["GET"])
+def api_get_backups():
+    return jsonify({"count": len(list_backups()), "backups": list_backups()})
 
 
-# POST: Real Backup Endpoint
 @app.route("/api/v1/backup", methods=["POST"])
 def api_backup_volume():
-    """Create a real backup copy of the volume metadata."""
-    global backup_operations_total, backup_failures_total
-
     body = request.get_json() or {}
     vol_name = body.get("volume")
 
     if not vol_name:
-        backup_failures_total += 1
-        return jsonify({"error": "Missing 'volume'"}), 400
+        backup_failures_total.inc()
+        return jsonify({"error": "Missing volume"}), 400
 
     vol = get_volume_by_name(vol_name)
     if not vol:
-        backup_failures_total += 1
-        return jsonify({"error": "Volume not found", "volume": vol_name}), 404
+        backup_failures_total.inc()
+        return jsonify({"error": "Volume not found"}), 404
 
-    backup_id = f"{vol['id']}_bkp_{uuid.uuid4().hex[:6]}"
-
-    backup_data = {
-        "backup_id": backup_id,
+    backup = {
+        "backup_id": f"{vol['id']}_bkp_{uuid.uuid4().hex[:6]}",
         "volume_id": vol["id"],
         "volume_name": vol["name"],
         "size_gb": vol["size_gb"],
@@ -175,20 +180,20 @@ def api_backup_volume():
         "status": "completed",
     }
 
+    # 1️⃣ Save backup (core logic)
     try:
-        save_backup(backup_data)
-        backup_operations_total += 1
-        return jsonify({"status": "backup_completed", **backup_data}), 200
+        save_backup(backup)
     except Exception as e:
-        backup_failures_total += 1
-        return jsonify({"error": "backup_failed", "details": str(e)}), 500
+        backup_failures_total.inc()
+        backup_rpo_violation.labels(volume=vol["name"]).set(1)
+        return jsonify({"error": str(e)}), 500
 
+    # 2️⃣ Metrics update (MUST NOT fail backup)
+    backup_operations_total.inc()
+    backup_last_success_timestamp.labels(volume=vol["name"]).set(time.time())
+    backup_rpo_violation.labels(volume=vol["name"]).set(0)
 
-# NEW: GET /api/v1/backups
-@app.route("/api/v1/backups", methods=["GET"])
-def api_list_backups():
-    backups = list_backups()
-    return jsonify({"count": len(backups), "backups": backups})
+    return jsonify(backup), 200
 
 
 # -----------------------------
@@ -201,13 +206,8 @@ def api_health():
 
 @app.route("/metrics")
 def api_metrics():
-    count = len(list_volumes())
-    metrics_text = [
-        f"storage_volumes_total {count}",
-        f"backup_operations_total {backup_operations_total}",
-        f"backup_failures_total {backup_failures_total}",
-    ]
-    return "\n".join(metrics_text) + "\n", 200
+    storage_volume_count.set(len(list_volumes()))
+    return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
 
 # -----------------------------

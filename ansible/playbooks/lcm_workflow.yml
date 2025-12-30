@@ -1,0 +1,31 @@
+- name: LCM Workflow (Simulated) - Precheck, Upgrade, Postcheck, Report
+  hosts: localhost
+  gather_facts: false
+  vars:
+    api_health: "http://localhost:5000/health"
+
+  tasks:
+    - name: LCM - Run workflow
+      block:
+        - name: Pre-check
+          import_tasks: ../tasks/health_check_tasks.yml
+
+        - name: Simulate upgrade (rolling change)
+          ansible.builtin.include_tasks: ../tasks/lcm_upgrade_tasks.yml
+
+        - name: Post-check (API health)
+          ansible.builtin.uri:
+            url: "{{ api_health }}"
+            method: GET
+            status_code: 200
+          register: post_health
+
+      rescue:
+        - name: Mark LCM as failed
+          ansible.builtin.debug:
+            msg: "LCM FAILED - investigate logs and rollback steps"
+
+      always:
+        - name: Report summary
+          ansible.builtin.debug:
+            msg: "LCM workflow finished (check pre/post health + logs)"
