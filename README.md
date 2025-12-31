@@ -239,5 +239,4 @@ It is not intended for direct production use but is designed to demonstrate arch
 👨‍💼 Author
 
 Thomas Waas
-
 Cloud-Native Telecom & DevOps Engineer
