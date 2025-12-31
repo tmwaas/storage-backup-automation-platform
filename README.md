@@ -138,7 +138,7 @@ This will start:
 
 ---
 
-## 🧪 Automation Workflows (Ansible Playbooks)
+## Automation Workflows (Ansible Playbooks)
 
 In addition to the API-driven and scheduled operations, this project includes a set of **Ansible playbooks** that simulate day-to-day operational and lifecycle workflows typically executed by infrastructure or platform teams.
 
@@ -238,5 +238,5 @@ It is not intended for direct production use but is designed to demonstrate arch
 
 👨‍💼 Author
 
-Thomas Waas
-Cloud-Native Telecom & DevOps Engineer
+Thomas Waas 
+
