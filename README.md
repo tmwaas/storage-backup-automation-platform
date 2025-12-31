@@ -1,4 +1,4 @@
-# 🚀 Infrastructure Automation – Storage & Backup Platform (Simulation Lab)
+# Infrastructure Automation – Storage & Backup Platform (Simulation Lab)
 
 ## Overview
 
@@ -237,5 +237,7 @@ This project is a **simulation and learning platform**.
 It is not intended for direct production use but is designed to demonstrate architecture, automation, and observability principles used in real-world environments.
 
 👨‍💼 Author
+
 Thomas Waas
+
 Cloud-Native Telecom & DevOps Engineer
