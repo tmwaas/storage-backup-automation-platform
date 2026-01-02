@@ -79,6 +79,47 @@ Alert rules are defined for operational visibility, including:
 - Backup failures
 - Missing or delayed backups (RPO violations)
 
+### ✅ Security & Access Control 
+
+This project includes a lightweight but realistic security simulation aligned with enterprise practices.
+
+### API Token–Based RBAC
+The Storage API implements Role-Based Access Control (RBAC) using API tokens:
+
+| Role  | Allowed Actions |
+|-------|-----------------|
+| read  | List volumes, list backups |
+| backup| Trigger backups |
+| admin | Create/delete volumes |
+
+Tokens are provided via HTTP header:
+
+X-API-TOKEN: <token>
+
+Tokens are injected via environment variables:
+- ADMIN_TOKEN
+- BACKUP_TOKEN
+- READ_TOKEN
+
+### Secrets Management
+Secrets are not hardcoded in the application logic. In production, these tokens should be stored securely using:
+- Docker secrets
+- Kubernetes Secrets
+- Vault (HashiCorp)
+
+### Transport & Encryption
+- HTTPS termination is assumed at ingress / reverse proxy layer
+- Backup metadata stored in MinIO (S3-compatible)
+- Supports server-side encryption in real deployments
+
+### Observability & Security Monitoring
+Security-relevant signals are observable via Prometheus metrics:
+- backup_failures_total
+- backup_rpo_violation
+- API availability via /health
+
+These metrics can be alerted on using Prometheus Alertmanager or Grafana Alerting.
+
 ---
 
 ## Architecture Overview

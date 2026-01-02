@@ -6,6 +6,9 @@ services:
       - "5000:5000"
     environment:
       - PYTHONUNBUFFERED=1
+      - ADMIN_TOKEN=admin-secret
+      - BACKUP_TOKEN=backup-secret
+      - READ_TOKEN=read-secret
     command: python app.py  
     depends_on:
       - minio

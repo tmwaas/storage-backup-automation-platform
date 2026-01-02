@@ -1,0 +1,45 @@
+---
+- name: RBAC Validation Test
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    api_url: "http://localhost:5000/api/v1/volumes"
+    read_token: "{{ lookup('env','READ_TOKEN') }}"
+    backup_token: "{{ lookup('env','BACKUP_TOKEN') }}"
+    admin_token: "{{ lookup('env','ADMIN_TOKEN') }}"
+
+  tasks:
+    - name: Read role should access volumes
+      uri:
+        url: "{{ api_url }}"
+        headers:
+          X-API-TOKEN: "{{ read_token }}"
+        method: GET
+        status_code: 200
+
+    - name: Read role should not create volume
+      uri:
+        url: "{{ api_url }}"
+        headers:
+          X-API-TOKEN: "{{ read_token }}"
+        method: POST
+        body_format: json
+        body:
+          name: test
+          size_gb: 1
+        status_code: 403
+
+    - name: Backup role should NOT create volume (negative test)
+      uri:
+        url: "http://localhost:5000/api/v1/volumes"
+        method: POST
+        headers:
+          X-API-TOKEN: "{{ backup_token }}"
+          Content-Type: application/json
+        body_format: json
+        body:
+          name: "forbidden-volume"
+          size_gb: 1
+        status_code: 403
+    
