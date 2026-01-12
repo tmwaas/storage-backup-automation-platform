@@ -1,0 +1,23 @@
+FROM alpine:3.20
+
+RUN apk add --no-cache bash curl jq tzdata busybox-suid
+
+# Default timezone
+ENV TZ=Europe/Amsterdam
+
+WORKDIR /app
+COPY scripts/backup_all_volumes.sh /app/backup_all_volumes.sh
+RUN chmod +x /app/backup_all_volumes.sh
+
+# Copy cron schedule
+COPY scheduler/crontab /etc/crontabs/root
+
+# Fix line endings (Crucial for Windows/WSL development)
+RUN sed -i 's/\r$//' /etc/crontabs/root && \
+    sed -i 's/\r$//' /app/backup_all_volumes.sh
+
+# Ensure log file exists
+RUN mkdir -p /var/log && touch /var/log/cron.log
+
+# Run cron in foreground
+CMD ["crond", "-f", "-l", "8"]

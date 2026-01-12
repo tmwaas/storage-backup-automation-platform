@@ -38,6 +38,20 @@ A dedicated **backup scheduler container** executes automatic backups using **cr
 - API-driven backup triggers (no direct storage coupling)
 - Designed to mimic enterprise backup orchestration services
 
+The scheduler is health-aware and only executes backup jobs once the Storage API is fully available and responding.
+
+### ✅ Service Health Checks & Dependency Management
+To improve reliability and prevent race conditions during startup, the platform implements container-level health checks and service dependencies.
+
+Key aspects:
+
+- The Storage API exposes a `/health` endpoint used to indicate readiness.
+- Docker Compose health checks validate API availability before dependent services start.
+- The Backup Scheduler container waits until the Storage API is marked as **healthy** before executing scheduled backups.
+- This prevents missed or failed backup jobs caused by unavailable APIs during container startup or restarts.
+
+This design reflects real-world production patterns where backup orchestration services must depend on application readiness rather than container start order alone.
+
 ### ✅ Infrastructure & Operational Automation (Ansible)
 The repository includes Ansible playbooks that simulate operational workflows:
 

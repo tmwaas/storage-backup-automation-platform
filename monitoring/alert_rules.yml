@@ -34,14 +34,17 @@ groups:
 
       # 4. Backup Failures is detected
       - alert: BackupFailuresDetected
-        expr: backup_failures_total > 0
-        for: 1m
+        expr: increase(backup_failures_total[1h]) > 0
+        for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "Backup failures detected"
-          description: "One or more backup operations have failed. backup_failures_total={{ $value }}."   
-
+          summary: Backup failures detected in the last hour
+          description: >
+            Backup failures detected in the last hour.
+            Failure count: {{ $value }}.
+            Please check storage-api logs and backup-scheduler cron execution.
+            
       # 5. Backup not running in 24h
       - alert: BackupNotRunning24h
         expr: increase(backup_operations_total[24h]) == 0

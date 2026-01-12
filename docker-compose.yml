@@ -13,6 +13,14 @@ services:
     depends_on:
       - minio
 
+    # Healthcheck to ensure the API is responding to HTTP requests
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s  
+
   minio:
     image: minio/minio
     container_name: minio
@@ -68,16 +76,21 @@ services:
   backup-scheduler:
     build:
       context: .
-      dockerfile: Dockerfile.scheduler
+      dockerfile: scheduler/Dockerfile.scheduler
     container_name: backup-scheduler
     environment:
       - API_BASE=http://storage-api:5000/api/v1
       - TZ=Europe/Amsterdam
-    volumes:
-      - ./scripts/cronjobs:/etc/crontabs/root:ro
     depends_on:
       storage-api:
-        condition: service_started    
+        condition: service_healthy # This ensures the API is ready to handle backup requests.   
+
+    # Ensure the cron daemon is running inside the container    
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3    
 
 volumes:
   grafana-data:

@@ -1,47 +1,63 @@
 ---
 - name: Trigger backups via API and record results
   hosts: localhost
-  gather_facts: no # Added for completeness
+  gather_facts: no
 
   vars:
-    api_url: "http://localhost:5000/api/v1"
+    api_base: "http://localhost:5000/api/v1"
+    read_token: "read-secret"
+    backup_token: "backup-secret"
 
   tasks:
-    # 1. List Volumes
+    # -------------------------------------------------
+    # 1. List volumes (READ role required)
+    # -------------------------------------------------
     - name: List volumes (GET /api/v1/volumes)
       uri:
-        url: "{{ api_url }}/volumes"
+        url: "{{ api_base }}/volumes"
         method: GET
-        status_code: 200 # Expect 200 for a successful list
+        headers:
+          X-API-TOKEN: "{{ read_token }}"
+          Accept: application/json
+        status_code: 200
         return_content: yes
       register: volumes
 
-    # 2. Trigger Backup for Each Volume
-    - name: Trigger backup for each volume (POST /api/v1/backup)
+    - name: Show volume count
+      debug:
+        msg: "Found {{ volumes.json.count }} volumes"
+
+    # -------------------------------------------------
+    # 2. Trigger backup for each volume (BACKUP role)
+    # -------------------------------------------------
+    - name: Trigger backup for each volume
       uri:
-        # Assuming the backup endpoint is at /api/v1/backup
-        url: "{{ api_url }}/backup" 
+        url: "{{ api_base }}/backup"
         method: POST
+        headers:
+          X-API-TOKEN: "{{ backup_token }}"
+          Content-Type: application/json
         body_format: json
         body:
-          volume: "{{ volume_item.name }}"
-        # Accepting 200 (OK) or 202 (Accepted/In Progress)
-        status_code: 200,202 
+          volume: "{{ item.name }}"
+        status_code:
+          - 200
+          - 202
         return_content: yes
-      # Use the correct JSON path to the list of volumes
-      loop: "{{ volumes.json.volumes | default([]) }}" 
+      loop: "{{ volumes.json.volumes | default([]) }}"
       loop_control:
-        loop_var: volume_item # Using explicit loop_var for clarity
+        label: "{{ item.name }}"
       register: backup_results
-      
-    # 3. Save Backup Results
-    # Ensuring logs directory exists before writing
+
+    # -------------------------------------------------
+    # 3. Persist backup results locally
+    # -------------------------------------------------
     - name: Ensure logs directory exists
       file:
-        path: "logs"
+        path: logs
         state: directory
-        
+
     - name: Save backup results (combined log)
       copy:
         content: "{{ backup_results.results | to_nice_json }}"
-        dest: "logs/backup_results_{{ lookup('pipe','date +%Y%m%d%H%M%S') }}.json"     
+        dest: "logs/backup_results_{{ lookup('pipe','date +%Y%m%d%H%M%S') }}.json"
