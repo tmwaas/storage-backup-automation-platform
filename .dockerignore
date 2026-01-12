@@ -1,0 +1,39 @@
+data/
+__pycache__/
+*.venv/
+.git/
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+
+# Virtualenv
+.venv/
+venv/
+*.venv/
+
+# Logs
+*.log
+logs/
+var/log/
+
+# Ansible runtime files
+*.retry
+
+# Grafana / Prometheus runtime data
+grafana-data/
+prometheus-data/
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+
+# Environment / secrets
+.env
+*.env
+
+# Temp / test artifacts
+tmp/
+test/
