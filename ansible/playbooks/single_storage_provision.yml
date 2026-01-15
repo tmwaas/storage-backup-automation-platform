@@ -4,7 +4,7 @@
   gather_facts: no
 
   vars:
-    api_url: "http://localhost:5000/api/v1/volumes"
+    api_url: "http://{{ ansible_host }}:5000/api/v1/volumes"
     volume_name: "vol-{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
     size_gb: 20
 

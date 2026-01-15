@@ -4,7 +4,7 @@
   gather_facts: no
 
   vars:
-    metrics_url: "http://localhost:5000/metrics"
+    metrics_url: "http://{{ ansible_host }}:5000/metrics"
 
   tasks:
 
