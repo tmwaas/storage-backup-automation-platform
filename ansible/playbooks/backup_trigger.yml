@@ -40,7 +40,7 @@
           Content-Type: application/json
         body_format: json
         body:
-          volume: "{{ item.name }}"
+          volume: "{{ item.id }}"
         status_code:
           - 200
           - 202
