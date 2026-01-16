@@ -12,6 +12,8 @@
       ansible.builtin.uri:
         url: "{{ metrics_url }}"
         method: GET
+        headers:
+          X-API-TOKEN: "{{ read_token }}"
         return_content: yes
       register: metrics_result
 

@@ -13,6 +13,8 @@
       uri:
         url: "{{ api_base }}/volumes"
         method: GET
+        headers:
+          X-API-TOKEN: "{{ read_token }}"
         return_content: true
       register: vols
 
@@ -20,6 +22,8 @@
       uri:
         url: "{{ api_base }}/backups"
         method: GET
+        headers:
+          X-API-TOKEN: "{{ read_token }}"
         return_content: true
       register: bkp
 
