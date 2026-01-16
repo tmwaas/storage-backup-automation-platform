@@ -1,17 +1,19 @@
 ---
-- name: Enforce RPO for volume {{ vname }}
+# Task file to validate RPO compliance for a specific volume
+- name: Enforce RPO validation logic for {{ vname }}
   block:
-
-    - name: Assert backup exists and is within RPO
-      assert:
+    # Validate if a backup exists and if it falls within the RPO threshold
+    - name: "Assert backup exists and is within RPO for {{ vname }}"
+      ansible.builtin.assert:
         that:
           - v_backups | length > 0
-          - age_seconds <= rpo_seconds
+          - age_seconds | int <= rpo_seconds | int
         fail_msg: "RPO violation: volume={{ vname }} last_backup={{ latest_created }}"
         success_msg: "OK: volume={{ vname }} last_backup={{ latest_created }}"
 
-    - name: Append success report
-      set_fact:
+    # If assertion passes, append success status to the report list
+    - name: "Append success report for {{ vname }}"
+      ansible.builtin.set_fact:
         report: "{{ report + [{
           'volume': vname,
           'last_backup': latest_created,
@@ -20,8 +22,9 @@
         }] }}"
 
   rescue:
-    - name: Append failure report
-      set_fact:
+    # If assertion fails, the rescue block catches the error and marks it as a violation
+    - name: "Append failure report for {{ vname }}"
+      ansible.builtin.set_fact:
         report: "{{ report + [{
           'volume': vname,
           'last_backup': latest_created,

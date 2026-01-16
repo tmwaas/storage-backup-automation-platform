@@ -4,12 +4,13 @@
   gather_facts: false
 
   vars:
+    # API endpoints using dynamic inventory variables
     api_base: "http://{{ ansible_host }}:5000/api/v1"
     rpo_hours: 24
     timestamp: "{{ lookup('pipe','date -u +%Y%m%d%H%M%S') }}"
 
   tasks:
-    - name: Get volumes
+    - name: Fetch all storage volumes from API
       uri:
         url: "{{ api_base }}/volumes"
         method: GET
@@ -18,7 +19,7 @@
         return_content: true
       register: vols
 
-    - name: Get backups
+    - name: Fetch all backup metadata from API
       uri:
         url: "{{ api_base }}/backups"
         method: GET
@@ -27,41 +28,57 @@
         return_content: true
       register: bkp
 
-    - name: Prepare data
+    - name: Initialize data structures for validation
       set_fact:
         volumes: "{{ vols.json.volumes | default([]) }}"
         backups: "{{ bkp.json.backups | default([]) }}"
         report: []
 
-    - name: Validate each volume backup
+    - name: Iterate through volumes to validate RPO compliance
       include_tasks: ../tasks/validate_volume_backup.yml
       vars:
         vname: "{{ item.name }}"
+        
+        # Filter backups belonging to the current volume
         v_backups: "{{ backups | selectattr('volume_name','equalto', item.name) | list }}"
+        
+        # Determine the latest backup timestamp
         latest_created: >-
           {{
             (v_backups | sort(attribute='created_at') | last).created_at
               if v_backups | length > 0 else ''
           }}
-        latest_dt: "{{ latest_created | regex_replace('Z$','') | to_datetime('%Y-%m-%dT%H:%M:%S.%f') if latest_created != '' else none }}"
-        now_dt: "{{ lookup('pipe','date -u +%Y-%m-%dT%H:%M:%S.%6N') | to_datetime('%Y-%m-%dT%H:%M:%S.%f') }}"
-        age_seconds: "{{ (now_dt - latest_dt).total_seconds() if latest_dt is not none else 999999999 }}"
-        rpo_seconds: "{{ rpo_hours * 3600 }}"
+
+        # Convert ISO8601 string to Unix Epoch (integer) for stable calculation
+        # This prevents 'AnsibleUnsafeText' math errors during iteration
+        latest_epoch: >-
+          {{ 
+            ((latest_created | regex_replace('\.\d+', '') | regex_replace('Z$', '')) | to_datetime('%Y-%m-%dT%H:%M:%S')).strftime('%s') | int 
+            if latest_created != '' else 0 
+          }}
+        
+        # Get current system time in Unix Epoch
+        now_epoch: "{{ lookup('pipe','date +%s') | int }}"
+
+        # Calculate backup age in seconds (Now - Latest)
+        # Defaults to a high number if no backup exists to trigger RPO violation
+        age_seconds: "{{ (now_epoch - latest_epoch) if latest_epoch > 0 else 999999999 }}"
+        rpo_seconds: "{{ rpo_hours | int * 3600 }}"
+        
       loop: "{{ volumes }}"
       loop_control:
         label: "{{ item.name }}"
 
-    - name: Ensure logs directory exists
+    - name: Ensure centralized logs directory is present
       file:
         path: logs
         state: directory
 
-    - name: Save validation report
+    - name: Export validation results to JSON report
       copy:
         dest: "logs/backup_validation_{{ timestamp }}.json"
         content: "{{ report | to_nice_json }}"
 
-    - name: Show summary
+    - name: Display validation summary in AWX console
       debug:
         var: report
-
