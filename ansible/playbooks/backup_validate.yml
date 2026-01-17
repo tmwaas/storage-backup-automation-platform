@@ -62,9 +62,13 @@
 
         # Calculate backup age in seconds (Now - Latest)
         # Defaults to a high number if no backup exists to trigger RPO violation
-        age_seconds: "{{ (now_epoch - latest_epoch) if latest_epoch > 0 else 999999999 }}"
+        age_seconds: >-
+          {{ 
+            ( (now_epoch | int) - (latest_epoch | int) ) 
+            if (latest_epoch | int) > 0 else 999999999 
+          }}          
         rpo_seconds: "{{ rpo_hours | int * 3600 }}"
-        
+                
       loop: "{{ volumes }}"
       loop_control:
         label: "{{ item.name }}"
