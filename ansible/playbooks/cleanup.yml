@@ -1,10 +1,21 @@
 ---
-- name: Cleanup all volumes in the system (LCM automation)
-  hosts: localhost
-  gather_facts: no
+- name: Cleanup all volumes (AWX-safe LCM automation)
+  hosts: all
+  connection: local
+  gather_facts: false
 
   vars:
-    api_url: "http://localhost:5000/api/v1/volumes"
+    api_url: "{{ storage_api_url | default('http://storage-api:5000/api/v1/volumes') }}"
+    confirm_cleanup: "{{ confirm_cleanup | default(false) }}"
+    api_token: "{{ storage_api_token | default('') }}"
+
+  pre_tasks:
+    - name: Safety check – require explicit confirmation
+      fail:
+        msg: >
+          ❌ Cleanup aborted!
+          You must set confirm_cleanup=true to allow volume deletion.
+      when: not confirm_cleanup | bool
 
   tasks:
 
@@ -12,24 +23,36 @@
       uri:
         url: "{{ api_url }}"
         method: GET
-        return_content: yes
+        headers:
+          Authorization: "Bearer {{ api_token }}"
+        return_content: true
+        status_code: 200
       register: volumes_result
 
     - name: Show volumes that will be removed
       debug:
-        var: volumes_result.json.volumes
+        msg: >
+          Volumes to be deleted:
+          {{ volumes_result.json.volumes | default([]) }}
+
+    - name: Skip if no volumes exist
+      meta: end_play
+      when: volumes_result.json.volumes | default([]) | length == 0
 
     - name: Delete each volume
-      loop: "{{ volumes_result.json.volumes }}"
-      loop_control:
-        label: "{{ item.id }}"
       uri:
         url: "{{ api_url }}/{{ item.id }}"
         method: DELETE
-        status_code: 200
+        headers:
+          Authorization: "Bearer {{ api_token }}"
+        status_code: [200, 204]
+      loop: "{{ volumes_result.json.volumes }}"
+      loop_control:
+        label: "{{ item.id }}"
       register: deletion_results
 
-    - name: Show deletion results
+    - name: Show deletion summary
       debug:
-        var: deletion_results.results
-     
+        msg: >
+          Cleanup finished.
+          Deleted {{ deletion_results.results | length }} volumes.
