@@ -1,0 +1,24 @@
+---
+- name: Ensure the root user account cannot log into devices
+  hosts: all
+  become: true 
+  
+  tasks:
+    - name: Disallow root login to host via SSH
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PermitRootLogin" 
+        line: "PermitRootLogin no"
+        state: present
+        owner: root
+        group: root
+        mode: '0644'
+        validate: '/usr/sbin/sshd -t -f %s' 
+      notify: Restart SSH server service
+
+  handlers:
+    - name: Restart SSH server service
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+        
