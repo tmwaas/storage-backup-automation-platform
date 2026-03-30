@@ -19,6 +19,5 @@
   handlers:
     - name: Restart SSH server service
       ansible.builtin.service:
-        name: sshd
+        name: ssh
         state: restarted
-        
