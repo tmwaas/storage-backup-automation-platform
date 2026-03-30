@@ -1,0 +1,33 @@
+---
+- name: Security Compliance - Install ClamAV Antivirus
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install ClamAV package
+      ansible.builtin.package:
+        name: 
+          - clamav
+          - clamav-daemon
+        state: present
+
+    - name: Ensure freshclam service is running for automatic updates
+      ansible.builtin.service:
+        name: clamav-freshclam
+        state: started
+        enabled: true
+
+    - name: Update ClamAV virus database manually (Initial Sync)
+      ansible.builtin.command: freshclam
+      register: clamav_update
+      changed_when: "'is up to date' not in clamav_update.stdout"
+      failed_when: false # Kadang error kalo service freshclam lagi lock database
+      ignore_errors: true
+
+    - name: Set up daily ClamAV scan cron job
+      ansible.builtin.cron:
+        name: "Daily ClamAV Scan"
+        minute: "0"
+        hour: "2"
+        job: "/usr/bin/clamscan -r /home"
+        
