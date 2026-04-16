@@ -56,8 +56,8 @@ def check_token(required_role: str, endpoint: str) -> bool:
 s3 = boto3.client(
     "s3",
     endpoint_url=os.getenv("MINIO_ENDPOINT", "http://minio-service:9000"),
-    aws_access_key_id=os.getenv("MINIO_ACCESS_KEY", "minio"),
-    aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "minio123"),
+    aws_access_key_id=os.getenv("MINIO_ACCESS_KEY", "admin"),
+    aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "password123"),
     #endpoint_url="http://minio-service:9000",
     #aws_access_key_id="minio",
     #aws_secret_access_key="minio123",
