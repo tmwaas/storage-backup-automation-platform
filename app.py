@@ -55,7 +55,7 @@ def check_token(required_role: str, endpoint: str) -> bool:
 # =====================================================
 s3 = boto3.client(
     "s3",
-    endpoint_url="http://minio:9000",
+    endpoint_url="http://minio-service:9000",
     aws_access_key_id="minio",
     aws_secret_access_key="minio123",
     region_name="us-east-1",
@@ -310,4 +310,5 @@ def api_metrics():
     }
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+#    app.run(host="0.0.0.0", port=5000)
+     app.run(host="0.0.0.0", port=8080)
